@@ -1,0 +1,48 @@
+import java.util.regex.*;
+import java.io.*;
+import java.nio.file.*;
+import java.util.function.Predicate;
+
+public class ValidadorContrasena implements Runnable {
+    private final String contrasena;
+    private final Path archivoRegistro = Paths.get("registro.txt");
+
+    public ValidadorContrasena(String contrasena) {
+        this.contrasena = contrasena;
+    }
+
+    @Override
+    public void run() {
+        boolean esValida = validarContrasena(contrasena);
+        String resultado = esValida ? "VÁLIDA" : "INVÁLIDA";
+
+        System.out.println("Contraseña: " + contrasena + " → " + resultado);
+
+        // Escribir en el archivo
+        try (BufferedWriter escritor = Files.newBufferedWriter(archivoRegistro, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+            escritor.write("Contraseña: " + contrasena + " → " + resultado);
+            escritor.newLine();
+        } catch (IOException e) {
+            System.out.println("Error al escribir en el archivo: " + e.getMessage());
+        }
+    }
+
+    private boolean validarContrasena(String texto) {
+        Predicate<String> tieneLongitud = t -> t.length() >= 8;
+        Predicate<String> tieneMayusculas = t -> contarCoincidencias(t, "[A-Z]") >= 2;
+        Predicate<String> tieneMinusculas = t -> contarCoincidencias(t, "[a-z]") >= 3;
+        Predicate<String> tieneNumeros = t -> contarCoincidencias(t, "\\d") >= 1;
+        Predicate<String> tieneEspeciales = t -> contarCoincidencias(t, "[!@#$%^&*()\\-_=+<>?]") >= 1;
+
+        return tieneLongitud.and(tieneMayusculas).and(tieneMinusculas)
+                             .and(tieneNumeros).and(tieneEspeciales)
+                             .test(texto);
+    }
+
+    private int contarCoincidencias(String texto, String patron) {
+        Matcher matcher = Pattern.compile(patron).matcher(texto);
+        int contador = 0;
+        while (matcher.find()) contador++;
+        return contador;
+    }
+}
